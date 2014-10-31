@@ -60,3 +60,7 @@ double determinant_3(double **matrix) {
          matrix[0][1] * matrix[1][0] * matrix[2][2] -
          matrix[0][2] * matrix[1][1] * matrix[2][0];
 }
+
+double interpolate(double start, double finish, double lambda) {
+  return finish * lambda + (1.0 - lambda) * start;
+}
