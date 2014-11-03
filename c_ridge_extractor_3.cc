@@ -157,8 +157,16 @@ void get_major_eigen_vectors(double eigen_vectors[2][2][2][9], double eigen_valu
   for (int x = 0; x < 2; x++) {
     for (int y = 0; y < 2; y++) {
       for (int z = 0; z < 2; z++) {
+        for (int e = 1; e < 3; e++) {
+          if (fabs(dot_product_3d(principal, eigen_vectors[x][y][z] + e * 3)) > fabs(dot_product_3d(principal, eigen_vectors[x][y][z]))) {
+            for (int d = 0; d < 3; d++) {
+              std::swap(eigen_vectors[x][y][z][e * 3 + d], eigen_vectors[x][y][z][d]);
+            }
+            std::swap(eigen_values[x][y][z][e], eigen_values[x][y][z][0]);
+          }
+        }
         for (int d = 0; d < 3; d++) {
-          e1[x][y][z][d] = principal[d];
+          e1[x][y][z][d] = eigen_vectors[x][y][z][d];
         }
       }
     }
@@ -625,7 +633,6 @@ vtkPolyData *CRidgeExtractor::extract_ridges(
   int ny = dimensions[1];
   int nz = dimensions[2];
 
-  /*
   int ****edge_mark = create_4d_array<int>(nx, ny, nz, 3);
   for (int x = 0; x < nx; x++) {
     for (int y = 0; y < ny; y++) {
@@ -636,7 +643,6 @@ vtkPolyData *CRidgeExtractor::extract_ridges(
       }
     }
   }
-  */
 
   vtkSmartPointer<vtkPoints> mesh_points =
       vtkSmartPointer<vtkPoints>::New();
@@ -690,6 +696,7 @@ vtkPolyData *CRidgeExtractor::extract_ridges(
         }
 
         /// DEBUG ///
+        /*
         bool invalid_cell = false;
 
         if (!check_consistency(eigen_vector)) {
@@ -697,12 +704,16 @@ vtkPolyData *CRidgeExtractor::extract_ridges(
           invalid_cell = true;
         }
         count_cells++;
+        */
         // printf("%d, %d, %lf\n", num_invalid_cells, count_cells, static_cast<double>(num_invalid_cells) / count_cells);
 
-        if (invalid_cell) {
+        // if (invalid_cell) {
           get_major_eigen_vectors(eigen_vector, eigen_value, e1);
-          // continue;
-        }
+
+          // if (!check_consistency(eigen_vector)) {
+          //   continue;
+          // }
+        // }
         
         // Re-orientate e3
         double **vectors = create_matrix<double>(8, 3);
@@ -725,10 +736,15 @@ vtkPolyData *CRidgeExtractor::extract_ridges(
         for (int dx = 0; dx < 2; dx++) {
           for (int dy = 0; dy < 2; dy++) {
             for (int dz = 0; dz < 2; dz++) {
+              /*
               if (dot_product_3d(pivot, e1[dx][dy][dz]) < 0.0) {
                 for (int i = 0; i < 3; i++) {
                   e1[dx][dy][dz][i] *= -1.0;
                 }
+              }
+              */
+              for (int i = 0; i < 3; i++) {
+                e1[dx][dy][dz][i] = pivot[i];
               }
               dot_prod[dx][dy][dz] = dot_product_3d(grad[dx][dy][dz],
                                                     e1[dx][dy][dz]);
@@ -778,10 +794,10 @@ vtkPolyData *CRidgeExtractor::extract_ridges(
             int finish_z = kVertexList[vtx_2][2];
 
             // Insert a new point to the mesh (always)
-            // if (edge_mark[x + start_x][y + start_y][z + start_z][dim] == -1)
+            if (edge_mark[x + start_x][y + start_y][z + start_z][dim] == -1)
             {
-              // edge_mark[x + start_x][y + start_y][z + start_z][dim] =
-              //     mesh_points->GetNumberOfPoints();
+              edge_mark[x + start_x][y + start_y][z + start_z][dim] =
+                  mesh_points->GetNumberOfPoints();
 
               double dot_prod_1 = dot_prod[start_x][start_y][start_z];
               double dot_prod_2 = dot_prod[finish_x][finish_y][finish_z];
@@ -803,9 +819,9 @@ vtkPolyData *CRidgeExtractor::extract_ridges(
               mesh_points->InsertNextPoint(point_x, point_y, point_z);
             }
 
-            mesh_cells->InsertCellPoint(mesh_points->GetNumberOfPoints() - 1);
-            // mesh_cells->InsertCellPoint(
-            //     edge_mark[x + start_x][y + start_y][z + start_z][dim]);
+            // mesh_cells->InsertCellPoint(mesh_points->GetNumberOfPoints() - 1);
+            mesh_cells->InsertCellPoint(
+                edge_mark[x + start_x][y + start_y][z + start_z][dim]);
           }
         }
       }
@@ -813,13 +829,13 @@ vtkPolyData *CRidgeExtractor::extract_ridges(
   }
 
   /// DEBUG ///
-  printf("%d, %d, %lf\n", num_invalid_cells, total, static_cast<double>(num_invalid_cells) / total);
+  // printf("%d, %d, %lf\n", num_invalid_cells, total, static_cast<double>(num_invalid_cells) / total);
 
   vtkPolyData *mesh = vtkPolyData::New();
   mesh->SetPoints(mesh_points);
   mesh->SetPolys(mesh_cells);
 
-  // delete_4d_array(edge_mark);
+  delete_4d_array(edge_mark);
 
   cauchy_green->Delete();
   ftle->Delete();
