@@ -17,7 +17,14 @@ add_executable(CRidgeExtractorTest_2 c_ridge_extractor_test.cc
                                      math.cc
                                      util.cc)
 
+# This version tests on Marching Ridges
+add_executable(CRidgeExtractorTest_3 c_ridge_extractor_test.cc
+                                     c_ridge_extractor_3.cc
+                                     math.cc
+                                     util.cc)
+
 target_link_libraries(GradientFilterTest ${VTK_LIBRARIES})
 target_link_libraries(PrincipalComponentTest ${VTK_LIBRARIES})
 target_link_libraries(CRidgeExtractorTest ${VTK_LIBRARIES})
 target_link_libraries(CRidgeExtractorTest_2 ${VTK_LIBRARIES})
+target_link_libraries(CRidgeExtractorTest_3 ${VTK_LIBRARIES})
